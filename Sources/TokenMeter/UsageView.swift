@@ -6,6 +6,7 @@ struct UsageView: View {
     @ObservedObject var store: UsageStore
     @AppStorage(MenuBarVisibility.showClaude) private var showClaude = true
     @AppStorage(MenuBarVisibility.showCodex) private var showCodex = true
+    @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             VStack(alignment: .leading, spacing: 16) {
@@ -52,16 +53,17 @@ struct UsageView: View {
         }
     }
     private func meter(_ window: UsageWindow?, placeholder: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let tint = window?.level.tint(dark: colorScheme == .dark)
+        return VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(window?.label ?? placeholder)
                 Spacer()
                 Text(window.map { "\(Int($0.usedPercent.rounded()))% used" } ?? "Unavailable")
-                    .monospacedDigit().foregroundStyle(.secondary)
+                    .monospacedDigit().foregroundStyle(tint ?? .secondary)
             }.font(.subheadline)
             if let window {
                 ProgressView(value: min(window.usedPercent, 100), total: 100)
-                    .tint(window.usedPercent >= 90 ? .orange : .accentColor)
+                    .tint(tint ?? .accentColor)
                     .accessibilityLabel(window.label)
                     .accessibilityValue("\(Int(window.usedPercent.rounded())) percent used")
                     .help(window.resetsAt.map { "Resets \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "Reset time unavailable")

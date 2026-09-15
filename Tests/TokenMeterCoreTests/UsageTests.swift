@@ -63,6 +63,13 @@ final class UsageParsingTests {
         let missing = try UsageParsing.claude(data("{\"five_hour\":null,\"seven_day\":{\"utilization\":null}}"), now: now)
         XCTAssertNil(missing.shortTerm); XCTAssertNil(missing.weekly)
     }
+    @Test func testUsageLevelThresholds() {
+        let cases: [(Double, UsageLevel)] = [(0, .normal), (49.9, .normal), (50, .elevated), (74.9, .elevated),
+                                             (75, .high), (89.9, .high), (90, .critical), (100, .critical), (130, .critical)]
+        for (percent, level) in cases { XCTAssertEqual(UsageLevel(usedPercent: percent), level) }
+        XCTAssertEqual(UsageWindow(minutes: 300, usedPercent: 80).level, .high)
+        XCTAssertEqual(UsageWindow(minutes: 300, usedPercent: 89.6).level, .critical) // shown as 90%
+    }
     @Test func testRetryAfter() {
         XCTAssertEqual(UsageParsing.retryDate("120", now: now), now.addingTimeInterval(120))
         XCTAssertEqual(UsageParsing.retryDate(nil, now: now), now.addingTimeInterval(300))

@@ -35,6 +35,14 @@ final class UsageParsingTests {
         XCTAssertFalse(snapshot.isComplete)
         XCTAssertNil(snapshot.shortTerm); XCTAssertNil(snapshot.weekly)
     }
+    @Test func testOverLimitIsShownNotUnavailable() throws {
+        let codex = try UsageParsing.codex(data("""
+        {"rateLimits":{"primary":{"usedPercent":105,"windowDurationMins":300}}}
+        """), now: now)
+        XCTAssertEqual(codex.shortTerm?.usedPercent, 105)
+        let claude = try UsageParsing.claude(data("{\"five_hour\":{\"utilization\":101.5}}"), now: now)
+        XCTAssertEqual(claude.shortTerm?.usedPercent, 101.5)
+    }
     @Test func testDailyOnlyWhenDurationIsDaily() throws {
         let snapshot = try UsageParsing.codex(data("""
         {"rateLimits":{"primary":{"usedPercent":20,"windowDurationMins":1440}}}
@@ -166,6 +174,14 @@ final class HelperProcessTests {
         XCTAssertThrowsError(try helper.readToEnd()) { XCTAssertEqual($0 as? UsageFailure, .timeout) }
         helper.close()
         XCTAssertFalse(helper.process.isRunning)
+    }
+    @Test func testWriteToExitedHelperThrowsInsteadOfSIGPIPE() throws {
+        let helper = try HelperProcess(path: "/usr/bin/true", arguments: [], timeout: 1, owner: HelperProcesses())
+        helper.process.waitUntilExit()
+        XCTAssertThrowsError(try helper.send(["id": 1, "method": "initialize"])) {
+            XCTAssertEqual($0 as? UsageFailure, .unavailable("Codex helper exited."))
+        }
+        helper.close()
     }
     @Test func testStopKillsOwnedHelper() throws {
         let owner = HelperProcesses()

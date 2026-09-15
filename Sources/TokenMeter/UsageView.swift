@@ -4,6 +4,8 @@ import TokenMeterCore
 
 struct UsageView: View {
     @ObservedObject var store: UsageStore
+    @AppStorage(MenuBarVisibility.showClaude) private var showClaude = true
+    @AppStorage(MenuBarVisibility.showCodex) private var showCodex = true
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             VStack(alignment: .leading, spacing: 16) {
@@ -12,6 +14,13 @@ struct UsageView: View {
                     if id == .claude { Divider() }
                 }
                 Divider()
+                HStack(spacing: 12) {
+                    Text("Show in menu bar").foregroundStyle(.secondary)
+                    Spacer()
+                    Toggle("Claude", isOn: $showClaude)
+                    Toggle("Codex", isOn: $showCodex)
+                }
+                .toggleStyle(.checkbox).font(.subheadline)
                 HStack {
                     if store.isRefreshing { ProgressView().controlSize(.small); Text("Refreshing…").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
@@ -33,7 +42,7 @@ struct UsageView: View {
                     .font(.caption).foregroundStyle(state.isStale(at: now) ? Color.orange : Color.secondary)
                     .help(snapshot.fetchedAt.formatted(date: .abbreviated, time: .standard))
             }
-            if state.isLoading {
+            if state.isLoading && state.snapshot == nil {
                 Text("Loading…").font(.caption).foregroundStyle(.secondary)
             } else if let failure = state.failure {
                 Text(failure.message(for: id)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -51,7 +60,7 @@ struct UsageView: View {
                     .monospacedDigit().foregroundStyle(.secondary)
             }.font(.subheadline)
             if let window {
-                ProgressView(value: window.usedPercent, total: 100)
+                ProgressView(value: min(window.usedPercent, 100), total: 100)
                     .tint(window.usedPercent >= 90 ? .orange : .accentColor)
                     .accessibilityLabel(window.label)
                     .accessibilityValue("\(Int(window.usedPercent.rounded())) percent used")

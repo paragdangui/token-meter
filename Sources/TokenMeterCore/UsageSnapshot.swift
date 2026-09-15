@@ -4,6 +4,7 @@ public enum ProviderID: String, CaseIterable, Sendable {
     case claude, codex
     public var title: String { self == .claude ? "Claude Code" : "ChatGPT (Codex)" }
     public var signIn: String { self == .claude ? "Run claude auth login in Terminal." : "Sign in to Codex with ChatGPT." }
+    public var refreshSignIn: String { self == .claude ? "Claude sign-in token expired. Run claude once in Terminal to refresh it." : signIn }
 }
 
 public struct UsageWindow: Equatable, Sendable {
@@ -32,10 +33,12 @@ public struct UsageSnapshot: Equatable, Sendable {
 }
 
 public enum UsageFailure: Error, Equatable, Sendable {
-    case signedOut, unavailable(String), timeout, throttled(Date)
+    /// `signInExpired`: credentials exist but the provider's own client has not refreshed them yet.
+    case signedOut, signInExpired, unavailable(String), timeout, throttled(Date)
     public func message(for provider: ProviderID) -> String {
         switch self {
         case .signedOut: return provider.signIn
+        case .signInExpired: return provider.refreshSignIn
         case .unavailable(let message): return message
         case .timeout: return "Request timed out. Will retry."
         case .throttled(let date): return "Rate limited until \(date.formatted(date: .omitted, time: .shortened))."

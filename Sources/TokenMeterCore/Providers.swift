@@ -43,7 +43,9 @@ public struct ClaudeProvider: UsageProvider {
             guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
                   let oauth = object["claudeAiOauth"] as? [String: Any],
                   let token = oauth["accessToken"] as? String, !token.isEmpty else { throw UsageFailure.signedOut }
-            if let expiry = oauth["expiresAt"] as? Double, expiry / 1000 <= Date().timeIntervalSince1970 { throw UsageFailure.signedOut }
+            // Claude Code refreshes this token when it runs. Don't refresh it here: that would
+            // rotate the refresh token in Claude Code's own Keychain item and could sign it out.
+            if let expiry = oauth["expiresAt"] as? Double, expiry / 1000 <= Date().timeIntervalSince1970 { throw UsageFailure.signInExpired }
             return token
         }
         try Task.checkCancellation()

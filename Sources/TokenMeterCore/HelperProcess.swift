@@ -41,6 +41,8 @@ final class HelperProcess {
         // Close parent copies of child endpoints so EOF is observable.
         try? output.fileHandleForWriting.close()
         try? input.fileHandleForReading.close()
+        // A helper that exits early must surface as a write error, not a SIGPIPE that kills the app.
+        _ = fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
         let fd = output.fileHandleForReading.fileDescriptor
         _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
     }
@@ -54,7 +56,8 @@ final class HelperProcess {
     deinit { if id != nil { close() } }
     func send(_ message: [String: Any]) throws {
         let data = try JSONSerialization.data(withJSONObject: message) + Data([10])
-        try input.fileHandleForWriting.write(contentsOf: data)
+        do { try input.fileHandleForWriting.write(contentsOf: data) }
+        catch { throw UsageFailure.unavailable("Codex helper exited.") }
     }
     private func readChunk() throws -> Data? {
         let fd = output.fileHandleForReading.fileDescriptor

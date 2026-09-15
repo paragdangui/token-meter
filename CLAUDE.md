@@ -4,29 +4,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Pre-implementation. The directory contains only [PLAN.md](PLAN.md) — no source, no Xcode project, no build system, and not a git repository. PLAN.md is the specification; read it before writing anything, and update this file with real build/test commands as soon as a target exists.
-
-Token Meter is a personal-use native macOS menu bar app showing Claude Code and ChatGPT (Codex) **subscription allowance used**, as four meters (session + weekly, per provider).
+Implemented. [PLAN.md](PLAN.md) is the specification and [README.md](README.md) is the user-facing doc. Token Meter is a personal-use native macOS menu bar app showing Claude Code and ChatGPT (Codex) **subscription allowance used**, as four meters (session + weekly, per provider).
 
 ## Toolchain on this Mac (verified)
 
-- macOS 26.6.2, Swift 6.3.3 (`swift` works standalone).
-- **Xcode is not installed** — `xcode-select` points at `/Library/Developer/CommandLineTools`, so `xcodebuild` fails. PLAN.md's "build locally in Xcode" step is blocked until Xcode is installed and selected. A SwiftPM executable target with an `.app` bundle assembled by hand is the alternative; raise the choice with the user rather than silently switching.
-- `claude` CLI: `~/.local/bin/claude`. `codex` is **not on PATH**, but `~/.codex/` exists with `auth.json` and `config.toml` — locate the actual Codex binary before assuming the app-server protocol is reachable.
+- macOS 26.6.2, Swift 6.4, **Command Line Tools only (no Xcode)**. That's why this is a SwiftPM package with an `.app` bundle assembled by `scripts/build-app.sh`, not an Xcode project.
+- Plain `swift test` fails here with "TestingMacros plugin not found". `scripts/test.sh` adds the CLT plugin path; always use it.
+- `claude` CLI: `~/.local/bin/claude` (2.1.267). `codex` is not on PATH; the app uses `/Applications/ChatGPT.app/Contents/Resources/codex` (codex-cli 0.154).
 
 ## Build / test commands
 
-None yet. Add them here when the target is created (build, run, and how to run a single test).
+```bash
+scripts/test.sh                                  # all tests (Swift Testing)
+scripts/test.sh --filter UsageParsingTests       # one suite or test name
+swift build                                      # debug build
+scripts/build-app.sh                             # release build -> dist/Token Meter.app (ad-hoc signed)
+open "dist/Token Meter.app"
+python3 scripts/probe_sources.py                 # live read-only check of both data sources (prints no secrets)
+```
 
-## Architecture (as planned)
+## Architecture
 
-Five responsibilities, kept separate:
+- `Sources/TokenMeterCore` (library, all the testable logic):
+  - `UsageSnapshot.swift`: `ProviderID`, `UsageWindow` (label derived from duration), `UsageSnapshot`, `UsageFailure`, `ProviderState` (stale = failure or more than 120s old).
+  - `UsageStore.swift`: the `UsageProvider` protocol and `UsageStore`, the single refresh coordinator. It covers the 60s timer, coalesced `reload()`, per-provider task group, `retryAt` throttle gate, `suspend`/`wake`/`stop`, and injectable `now`/`sleep` for tests.
+  - `Providers.swift`: the `CodexProvider` and `ClaudeProvider` adapters.
+  - `UsageParsing.swift`: pure response parsing plus `Retry-After`.
+  - `HelperProcess.swift`: bounded child processes (poll-based read timeout, `F_SETNOSIGPIPE`, SIGKILL on close). `HelperProcesses.shared` kills owned helpers on quit.
+- `Sources/TokenMeter` (app): `TokenMeterApp` (`MenuBarExtra`, accessory policy, sleep/wake observers), `UsageView` (the panel) and `MenuBarLabel`. `MenuBarLabel` shows `C 12%/2%  G 0%/1%` (session/weekly) in the menu bar. It renders a SwiftUI layout into a template `NSImage` so a stale provider can be dimmed on its own, which a `MenuBarExtra` Text label can't do. Per-provider menu-bar visibility is stored with `@AppStorage` (keys in `MenuBarVisibility`); with both hidden, it falls back to a gauge icon.
 
-- `TokenMeterApp` — `MenuBarExtra` lifecycle, `LSUIElement` agent app (no Dock icon).
-- `UsageView` — two provider sections, four meters, status line, Reload, Quit.
-- `UsageStore` — observable state plus the single refresh coordinator.
-- `UsageProvider` — shared fetch interface; Claude and Codex adapters implement it.
-- `UsageSnapshot` — provider, window duration/type, percent used, reset timestamp, last successful fetch time, fetch status.
+Chosen data sources (validated live; see README for maintenance risk):
+
+- **Codex:** spawn `codex app-server` per fetch, then `initialize` → `account/read` (must be `chatgpt`) → `account/rateLimits/read`, and read `rateLimitsByLimitId["codex"]`. Schema: `codex app-server generate-json-schema --out <dir>`.
+- **Claude:** read the Keychain item `Claude Code-credentials` (`claudeAiOauth.accessToken`) via `/usr/bin/security`, then call `GET https://api.anthropic.com/api/oauth/usage` with `anthropic-beta: oauth-2025-04-20`. This is undocumented. Never refresh or write the token; that belongs to Claude Code.
+- **Daily windows:** neither provider returns one. Both return 300-min + 10080-min windows.
 
 The provider-specific fragility (undocumented endpoints, CLI protocols, auth) belongs behind the adapters; nothing above `UsageProvider` should know how a percentage was obtained.
 
@@ -42,12 +53,12 @@ These come from PLAN.md and are the point of the project, not preferences:
 - Fetch providers independently; one failure must leave the other usable, with stale values retained and visibly marked with their own timestamps.
 - Refresh is 60s, fixed and not configurable. Reload shares the same fetch path, coalesces with in-flight work, and must **not** bypass provider throttling / `Retry-After`.
 - Credentials go in the macOS Keychain — never in source, logs, or PLAN.md. Prefer reusing existing provider sign-in over building account management.
-- No persistence, telemetry, hosted backend, history, charts, notifications, or spending tracking. Quit is the only control beyond Reload.
+- No persistence of usage data, telemetry, hosted backend, history, charts, notifications, or spending tracking. The only controls are Reload, Quit, and the per-provider "Show in menu bar" checkboxes (added at the user's request). Those checkboxes are the only persisted state, in UserDefaults.
 
-## Open questions to resolve before the relevant integration
+## Resolved questions
 
-- Whether "ChatGPT subscription" means Codex usage on the ChatGPT plan (the working assumption) or general ChatGPT usage.
-- Whether Claude Code exposes any supported structured source for the `/usage` subscription bars; if only an undocumented authenticated endpoint exists, validate it and document its maintenance risk before selecting it.
+- "ChatGPT subscription" = Codex usage on the ChatGPT plan (PLAN.md's working assumption, kept). General ChatGPT usage has no usage API.
+- Claude Code has no supported structured source for `/usage`, so the undocumented OAuth usage endpoint was validated and selected. Its risk is documented in README.md. Re-run the probe after CLI updates.
 
 ## Testing approach
 

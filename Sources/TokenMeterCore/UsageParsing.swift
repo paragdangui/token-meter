@@ -16,7 +16,7 @@ public enum UsageParsing {
         let resetsAt: Double?
         var mapped: UsageWindow? {
             guard let minutes = windowDurationMins, minutes > 0,
-                  let percent = usedPercent, percent.isFinite, (0...100).contains(percent) else { return nil }
+                  let percent = usedPercent, percent.isFinite, percent >= 0 else { return nil }
             return UsageWindow(minutes: minutes, usedPercent: percent, resetsAt: resetsAt.map(Date.init(timeIntervalSince1970:)))
         }
     }
@@ -41,7 +41,8 @@ public enum UsageParsing {
         let utilization: Double?
         let resets_at: String?
         func mapped(minutes: Int) -> UsageWindow? {
-            guard let percent = utilization, percent.isFinite, (0...100).contains(percent) else { return nil }
+            // Over 100 is a real at/over-limit reading, so only the bar is clamped (in the view).
+            guard let percent = utilization, percent.isFinite, percent >= 0 else { return nil }
             let fractional = ISO8601DateFormatter()
             fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             let date = resets_at.flatMap { fractional.date(from: $0) ?? ISO8601DateFormatter().date(from: $0) }

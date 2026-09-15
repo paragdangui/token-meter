@@ -19,5 +19,8 @@ xcuserdata/
 Packages/
 Package.resolved
 
+# Built app bundle (scripts/build-app.sh)
+dist/
+
 # Claude Code
 .claude/

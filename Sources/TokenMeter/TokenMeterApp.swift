@@ -5,8 +5,10 @@ import TokenMeterCore
 @main struct TokenMeterApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
-        MenuBarExtra("Token Meter", systemImage: "gauge.with.dots.needle.50percent") {
+        MenuBarExtra {
             UsageView(store: delegate.store)
+        } label: {
+            MenuBarLabel(store: delegate.store)
         }
         .menuBarExtraStyle(.window)
     }

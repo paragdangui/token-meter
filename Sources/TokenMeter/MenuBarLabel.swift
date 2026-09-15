@@ -10,8 +10,8 @@ enum MenuBarVisibility {
 }
 
 /// Menu bar item: per visible provider, an initial and "session/weekly" percentages, e.g. `C 12%/2%`.
-/// Rendered to a template image so each provider can be dimmed independently when stale,
-/// which a plain MenuBarExtra Text label can't do.
+/// Rendered to an image so each provider can be dimmed independently when stale and each
+/// percentage colored by its usage level, which a plain MenuBarExtra Text label can't do.
 struct MenuBarLabel: View {
     @ObservedObject var store: UsageStore
     @AppStorage(MenuBarVisibility.showClaude) private var showClaude = true
@@ -34,24 +34,45 @@ struct MenuBarLabel: View {
         window.map { "\(Int($0.usedPercent.rounded()))%" } ?? "–"
     }
 
+    /// Colored text can't be a template image, so both appearances are rasterized and the
+    /// menu bar button's own appearance picks one at draw time (it follows the wallpaper, not the app).
     private static func render(_ states: [ProviderID: ProviderState], providers: [ProviderID], now: Date) -> NSImage {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        guard let light = rasterize(states, providers: providers, now: now, dark: false, scale: scale),
+              let dark = rasterize(states, providers: providers, now: now, dark: true, scale: scale) else { return NSImage() }
+        let size = NSSize(width: CGFloat(light.width) / scale, height: CGFloat(light.height) / scale)
+        return NSImage(size: size, flipped: false) { rect in
+            let isDark = NSAppearance.currentDrawing().bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            NSGraphicsContext.current?.cgContext.draw(isDark ? dark : light, in: rect)
+            return true
+        }
+    }
+
+    private static func rasterize(_ states: [ProviderID: ProviderState], providers: [ProviderID], now: Date, dark: Bool, scale: CGFloat) -> CGImage? {
         let content = HStack(spacing: 7) {
             ForEach(providers, id: \.self) { id in
                 let state = states[id] ?? ProviderState()
                 HStack(spacing: 3) {
                     Text(id == .claude ? "C" : "G").font(.system(size: 13, weight: .semibold))
-                    Text("\(percent(state.snapshot?.shortTerm))/\(percent(state.snapshot?.weekly))")
-                        .font(.system(size: 12, weight: .medium).monospacedDigit())
+                    HStack(spacing: 0) {
+                        coloredPercent(state.snapshot?.shortTerm, dark: dark)
+                        Text("/")
+                        coloredPercent(state.snapshot?.weekly, dark: dark)
+                    }
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
                 }
                 // Stale values stay visible but dimmed, matching the panel's "Stale" marking.
                 .opacity(state.isStale(at: now) ? 0.45 : 1)
             }
         }
-        .foregroundStyle(.black)
+        .foregroundStyle(.primary)
+        .environment(\.colorScheme, dark ? .dark : .light)
         let renderer = ImageRenderer(content: content)
-        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
-        let image = renderer.nsImage ?? NSImage()
-        image.isTemplate = true
-        return image
+        renderer.scale = scale
+        return renderer.cgImage
+    }
+
+    private static func coloredPercent(_ window: UsageWindow?, dark: Bool) -> some View {
+        Text(percent(window)).foregroundStyle(window?.level.tint(dark: dark) ?? .primary)
     }
 }

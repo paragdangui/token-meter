@@ -20,6 +20,22 @@ public struct UsageWindow: Equatable, Sendable {
         let duration = minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes)m"
         return "Session (\(duration))"
     }
+    /// Based on the rounded value so the color always agrees with the percentage shown.
+    public var level: UsageLevel { UsageLevel(usedPercent: usedPercent.rounded()) }
+}
+
+/// How close a window is to its limit, for color-coding. Yellow, orange, red in the UI.
+public enum UsageLevel: Int, Comparable, Sendable {
+    case normal, elevated, high, critical
+    public init(usedPercent: Double) {
+        switch usedPercent {
+        case 90...: self = .critical
+        case 75..<90: self = .high
+        case 50..<75: self = .elevated
+        default: self = .normal
+        }
+    }
+    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
 public struct UsageSnapshot: Equatable, Sendable {

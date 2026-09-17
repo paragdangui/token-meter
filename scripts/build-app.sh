@@ -4,7 +4,8 @@ cd "$(dirname "$0")/.."
 swift build -c release
 BIN_DIR="$(swift build -c release --show-bin-path)"
 APP="$(pwd)/dist/Token Meter.app"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp assets/TokenMeter.icns "$APP/Contents/Resources/TokenMeter.icns"
 cp "$BIN_DIR/TokenMeter" "$APP/Contents/MacOS/TokenMeter"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -12,6 +13,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>TokenMeter</string>
 <key>CFBundleIdentifier</key><string>local.token-meter</string>
+<key>CFBundleIconFile</key><string>TokenMeter</string>
 <key>CFBundleName</key><string>Token Meter</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0.0</string>

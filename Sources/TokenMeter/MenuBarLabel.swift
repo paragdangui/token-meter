@@ -33,7 +33,7 @@ struct MenuBarLabel: View {
         let visible = ProviderID.allCases.filter { $0 == .claude ? showClaude : showCodex }
         if visible.isEmpty {
             // Keep something clickable so the panel (and these toggles) stay reachable.
-            Image(systemName: "gauge.with.dots.needle.50percent").accessibilityLabel("Token Meter")
+            Image(nsImage: TokenMeterLogo.image(size: 18, template: true)).accessibilityLabel("Token Meter")
         } else {
             // TimelineView inside a MenuBarExtra label can continuously invalidate the
             // status button during launch. Publish only actual clock ticks instead.

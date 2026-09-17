@@ -10,6 +10,13 @@ struct UsageView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image(nsImage: TokenMeterLogo.image(size: 36))
+                        .accessibilityHidden(true)
+                    Text("Token Meter").font(.title3.weight(.semibold))
+                    Spacer()
+                }
+                Divider()
                 ForEach(ProviderID.allCases, id: \.self) { id in
                     section(id, now: context.date)
                     if id == .claude { Divider() }

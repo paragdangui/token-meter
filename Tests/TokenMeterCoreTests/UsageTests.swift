@@ -75,6 +75,32 @@ final class UsageParsingTests {
         XCTAssertEqual(UsageParsing.retryDate(nil, now: now), now.addingTimeInterval(300))
         XCTAssertEqual(UsageParsing.retryDate("Thu, 01 Jan 1970 01:00:00 GMT", now: now), Date(timeIntervalSince1970: 3600))
     }
+    @Test func testResetCountdownBoundaries() {
+        let cases: [(TimeInterval, String)] = [
+            (5 * 3600, "5.0h"), (168 * 3600, "168.0h"),
+            (3601, "1.1h"), (3600, "1.0h"), (1, "0.1h"),
+            (0, "0.0h"), (-60, "0.0h")
+        ]
+        for (seconds, expected) in cases {
+            let window = UsageWindow(minutes: 300, usedPercent: 42, resetsAt: now.addingTimeInterval(seconds))
+            XCTAssertEqual(window.resetCountdown(at: now), expected)
+        }
+        XCTAssertNil(UsageWindow(minutes: 300, usedPercent: 42).resetCountdown(at: now))
+        let window = UsageWindow(minutes: 300, usedPercent: 42, resetsAt: now.addingTimeInterval(7200))
+        XCTAssertEqual(window.resetCountdown(at: now.addingTimeInterval(3600)), "1.0h")
+    }
+    @Test func testWeeklyResetCountdownDaysAndHours() {
+        let cases: [(TimeInterval, String)] = [
+            (168 * 3600, "7d 0h"), (121 * 3600, "5d 1h"),
+            (24 * 3600, "1d 0h"), (23 * 3600 + 1, "1d 0h"),
+            (3600, "0d 1h"), (1, "0d 1h"), (0, "0d 0h"), (-60, "0d 0h")
+        ]
+        for (seconds, expected) in cases {
+            let window = UsageWindow(minutes: 10080, usedPercent: 42, resetsAt: now.addingTimeInterval(seconds))
+            XCTAssertEqual(window.resetCountdown(at: now), expected)
+        }
+        XCTAssertNil(UsageWindow(minutes: 10080, usedPercent: 42).resetCountdown(at: now))
+    }
 }
 
 private actor StubProvider: UsageProvider {

@@ -14,7 +14,7 @@ scripts/build-app.sh
 open "dist/Token Meter.app"
 ```
 
-The app has no Dock icon. The menu bar item shows the values at a glance as `session/weekly`: **C** is Claude Code and **G** is ChatGPT (Codex), e.g. `C 12%/2%  G 0%/1%`. A dimmed provider is stale, and `–` means unavailable. Click it to open the full panel with Reload, Quit, and **Show in menu bar** checkboxes for hiding either provider from the menu bar. Hiding both shows a gauge icon instead. The checkboxes are remembered across launches; this is the only thing the app saves.
+The app has no Dock icon. The menu bar item shows percentages and time until reset as `session / weekly`: **C** is Claude Code and **G** is ChatGPT (Codex), e.g. `C 12% (4.2h) / 2% (5d 1h)`. A dimmed provider is stale, and `–` means unavailable. Click it to open the full panel with Reload, Quit, and **Show in menu bar** checkboxes for hiding either provider from the menu bar. Hiding both shows a gauge icon instead. The checkboxes are remembered across launches; this is the only thing the app saves.
 
 Run the tests with `scripts/test.sh`. Add `--filter <name>` to run a single suite or test.
 
@@ -32,7 +32,7 @@ Token Meter stores no credentials, usage history or telemetry of its own.
 - **Weekly** is the provider's 7-day window.
 - **Unavailable** means the provider didn't return that window. It never means 0%.
 - **Stale · Updated 12:34** means the last refresh failed, or the value is more than two minutes old. The numbers shown come from that earlier time.
-- Hover a bar to see when the window resets.
+- Both the menu bar and tray panel show time until each window resets, updated every 30 seconds. Session countdowns use hours rounded up to a tenth; weekly countdowns use days and hours rounded up to the next hour. Missing reset times are unavailable; elapsed reset times show `0.0h` or `0d 0h` until fresh data arrives. Hover a bar to see the exact reset date and time.
 
 "ChatGPT" here means **Codex usage included with your ChatGPT plan**, not general ChatGPT chat usage. No usage API covers general ChatGPT chat.
 

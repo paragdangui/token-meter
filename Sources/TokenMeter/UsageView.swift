@@ -36,8 +36,8 @@ struct UsageView: View {
         let state = store.states[id] ?? ProviderState()
         return VStack(alignment: .leading, spacing: 8) {
             Text(id.title).font(.headline)
-            meter(state.snapshot?.shortTerm, placeholder: "Session")
-            meter(state.snapshot?.weekly, placeholder: "Weekly")
+            meter(state.snapshot?.shortTerm, placeholder: "Session", now: now)
+            meter(state.snapshot?.weekly, placeholder: "Weekly", now: now)
             if let snapshot = state.snapshot {
                 Text("\(state.isStale(at: now) ? "Stale · " : "")Updated \(snapshot.fetchedAt.formatted(date: .omitted, time: .standard))")
                     .font(.caption).foregroundStyle(state.isStale(at: now) ? Color.orange : Color.secondary)
@@ -52,7 +52,7 @@ struct UsageView: View {
             }
         }
     }
-    private func meter(_ window: UsageWindow?, placeholder: String) -> some View {
+    private func meter(_ window: UsageWindow?, placeholder: String, now: Date) -> some View {
         let tint = window?.level.tint(dark: colorScheme == .dark)
         return VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -71,6 +71,8 @@ struct UsageView: View {
                 Capsule().fill(Color.secondary.opacity(0.15)).frame(height: 4)
                     .accessibilityLabel("\(placeholder) usage unavailable")
             }
+            Text(window?.resetCountdown(at: now).map { "Resets in \($0)" } ?? "Reset time unavailable")
+                .font(.caption).monospacedDigit().foregroundStyle(.secondary)
         }
     }
 }

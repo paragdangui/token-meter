@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import TokenMeterCore
 
@@ -9,29 +10,48 @@ enum MenuBarVisibility {
     static let showCodex = "menuBar.showCodex"
 }
 
-/// Menu bar item: per visible provider, an initial and "session/weekly" percentages, e.g. `C 12%/2%`.
+@MainActor final class MenuBarClock: ObservableObject {
+    @Published private(set) var now = Date()
+    private var timer: AnyCancellable?
+
+    init() {
+        timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+            .sink { [weak self] in self?.now = $0 }
+    }
+}
+
+/// Menu bar item: per visible provider, session/weekly percentages and reset countdowns.
 /// Rendered to an image so each provider can be dimmed independently when stale and each
 /// percentage colored by its usage level, which a plain MenuBarExtra Text label can't do.
 struct MenuBarLabel: View {
     @ObservedObject var store: UsageStore
+    @ObservedObject var clock: MenuBarClock
     @AppStorage(MenuBarVisibility.showClaude) private var showClaude = true
     @AppStorage(MenuBarVisibility.showCodex) private var showCodex = true
     var body: some View {
+        let now = clock.now
         let visible = ProviderID.allCases.filter { $0 == .claude ? showClaude : showCodex }
         if visible.isEmpty {
             // Keep something clickable so the panel (and these toggles) stay reachable.
             Image(systemName: "gauge.with.dots.needle.50percent").accessibilityLabel("Token Meter")
         } else {
-            Image(nsImage: Self.render(store.states, providers: visible, now: Date()))
+            // TimelineView inside a MenuBarExtra label can continuously invalidate the
+            // status button during launch. Publish only actual clock ticks instead.
+            Image(nsImage: Self.render(store.states, providers: visible, now: now))
                 .accessibilityLabel(visible.map { id in
                     let snapshot = store.states[id]?.snapshot
-                    return "\(id.title): session \(Self.percent(snapshot?.shortTerm)), weekly \(Self.percent(snapshot?.weekly))"
+                    return "\(id.title): session \(Self.percent(snapshot?.shortTerm)), resets in \(Self.countdown(snapshot?.shortTerm, now: now)); weekly \(Self.percent(snapshot?.weekly)), resets in \(Self.countdown(snapshot?.weekly, now: now))"
                 }.joined(separator: "; "))
+                .help("Usage and time until reset: session in hours / weekly in days and hours")
         }
     }
 
     private static func percent(_ window: UsageWindow?) -> String {
         window.map { "\(Int($0.usedPercent.rounded()))%" } ?? "–"
+    }
+
+    private static func countdown(_ window: UsageWindow?, now: Date) -> String {
+        window?.resetCountdown(at: now) ?? "–"
     }
 
     /// Colored text can't be a template image, so both appearances are rasterized and the
@@ -56,8 +76,9 @@ struct MenuBarLabel: View {
                     Text(id == .claude ? "C" : "G").font(.system(size: 13, weight: .semibold))
                     HStack(spacing: 0) {
                         coloredPercent(state.snapshot?.shortTerm, dark: dark)
-                        Text("/")
+                        Text(" (\(countdown(state.snapshot?.shortTerm, now: now))) / ")
                         coloredPercent(state.snapshot?.weekly, dark: dark)
+                        Text(" (\(countdown(state.snapshot?.weekly, now: now)))")
                     }
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
                 }

@@ -22,6 +22,19 @@ public struct UsageWindow: Equatable, Sendable {
     }
     /// Based on the rounded value so the color always agrees with the percentage shown.
     public var level: UsageLevel { UsageLevel(usedPercent: usedPercent.rounded()) }
+
+    /// Time until reset, rounded up so an active window never shows zero.
+    /// Weekly windows use days and hours; shorter windows use tenths of an hour.
+    public func resetCountdown(at now: Date) -> String? {
+        guard let resetsAt else { return nil }
+        let seconds = max(0, resetsAt.timeIntervalSince(now))
+        if minutes == 10080 {
+            let hours = Int(ceil(seconds / 3600))
+            return "\(hours / 24)d \(hours % 24)h"
+        }
+        let hours = ceil(seconds / 360) / 10
+        return String(format: "%.1fh", locale: Locale(identifier: "en_US_POSIX"), hours)
+    }
 }
 
 /// How close a window is to its limit, for color-coding. Yellow, orange, red in the UI.

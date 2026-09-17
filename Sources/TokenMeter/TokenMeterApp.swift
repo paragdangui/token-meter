@@ -8,7 +8,7 @@ import TokenMeterCore
         MenuBarExtra {
             UsageView(store: delegate.store)
         } label: {
-            MenuBarLabel(store: delegate.store)
+            MenuBarLabel(store: delegate.store, clock: delegate.clock)
         }
         .menuBarExtraStyle(.window)
     }
@@ -16,6 +16,7 @@ import TokenMeterCore
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = UsageStore(providers: [ClaudeProvider(), CodexProvider()])
+    let clock = MenuBarClock()
     private var observers: [NSObjectProtocol] = []
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)

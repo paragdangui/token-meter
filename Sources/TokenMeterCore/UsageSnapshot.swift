@@ -81,8 +81,9 @@ public struct ProviderState: Sendable {
     public var isLoading = false
     public var retryAt: Date?
     public init() {}
-    public func isStale(at now: Date) -> Bool {
+    public func isStale(at now: Date, for provider: ProviderID) -> Bool {
         guard let snapshot else { return false }
-        return failure != nil || now.timeIntervalSince(snapshot.fetchedAt) > 120
+        let staleAfter: TimeInterval = provider == .claude ? 240 : 120
+        return failure != nil || now.timeIntervalSince(snapshot.fetchedAt) > staleAfter
     }
 }

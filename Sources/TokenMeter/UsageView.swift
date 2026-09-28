@@ -46,8 +46,8 @@ struct UsageView: View {
             meter(state.snapshot?.shortTerm, placeholder: "Session", now: now)
             meter(state.snapshot?.weekly, placeholder: "Weekly", now: now)
             if let snapshot = state.snapshot {
-                Text("\(state.isStale(at: now) ? "Stale · " : "")Updated \(snapshot.fetchedAt.formatted(date: .omitted, time: .standard))")
-                    .font(.caption).foregroundStyle(state.isStale(at: now) ? Color.orange : Color.secondary)
+                Text("\(state.isStale(at: now, for: id) ? "Stale · " : "")Updated \(snapshot.fetchedAt.formatted(date: .omitted, time: .standard))")
+                    .font(.caption).foregroundStyle(state.isStale(at: now, for: id) ? Color.orange : Color.secondary)
                     .help(snapshot.fetchedAt.formatted(date: .abbreviated, time: .standard))
             }
             if state.isLoading && state.snapshot == nil {

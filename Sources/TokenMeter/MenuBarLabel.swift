@@ -24,6 +24,9 @@ enum MenuBarVisibility {
 /// Rendered to an image so each provider can be dimmed independently when stale and each
 /// percentage colored by its usage level, which a plain MenuBarExtra Text label can't do.
 struct MenuBarLabel: View {
+    private static let claudeMark = loadMark("ClaudeMark")
+    private static let chatGPTMark = loadMark("ChatGPTMark")
+
     @ObservedObject var store: UsageStore
     @ObservedObject var clock: MenuBarClock
     @AppStorage(MenuBarVisibility.showClaude) private var showClaude = true
@@ -54,6 +57,13 @@ struct MenuBarLabel: View {
         window?.resetCountdown(at: now) ?? "–"
     }
 
+    private static func loadMark(_ name: String) -> NSImage? {
+        guard let url = Bundle.module.url(forResource: name, withExtension: "png"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        image.isTemplate = true
+        return image
+    }
+
     /// Colored text can't be a template image, so both appearances are rasterized and the
     /// menu bar button's own appearance picks one at draw time (it follows the wallpaper, not the app).
     private static func render(_ states: [ProviderID: ProviderState], providers: [ProviderID], now: Date) -> NSImage {
@@ -73,7 +83,14 @@ struct MenuBarLabel: View {
             ForEach(providers, id: \.self) { id in
                 let state = states[id] ?? ProviderState()
                 HStack(spacing: 3) {
-                    Text(id == .claude ? "C" : "G").font(.system(size: 13, weight: .semibold))
+                    if let mark = id == .claude ? claudeMark : chatGPTMark {
+                        Image(nsImage: mark)
+                            .resizable()
+                            .renderingMode(.template)
+                            .frame(width: id == .claude ? 21 : 15, height: id == .claude ? 21 : 15)
+                    } else {
+                        Text(id == .claude ? "C" : "G").font(.system(size: 13, weight: .semibold))
+                    }
                     HStack(spacing: 0) {
                         coloredPercent(state.snapshot?.shortTerm, dark: dark)
                         Text(" (\(countdown(state.snapshot?.shortTerm, now: now))) / ")
@@ -83,7 +100,7 @@ struct MenuBarLabel: View {
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
                 }
                 // Stale values stay visible but dimmed, matching the panel's "Stale" marking.
-                .opacity(state.isStale(at: now) ? 0.45 : 1)
+                .opacity(state.isStale(at: now, for: id) ? 0.45 : 1)
             }
         }
         .foregroundStyle(.primary)

@@ -6,8 +6,12 @@ public struct CodexProvider: UsageProvider {
     private static func executable() throws -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let paths = [ProcessInfo.processInfo.environment["TOKEN_METER_CODEX_PATH"],
+                     "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex",
+                     "/Applications/Codex.app/Contents/Resources/codex-cli/bin/codex",
                      "/Applications/ChatGPT.app/Contents/Resources/codex",
                      "/Applications/Codex.app/Contents/Resources/codex",
+                     home + "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex",
+                     home + "/Applications/Codex.app/Contents/Resources/codex-cli/bin/codex",
                      home + "/Applications/ChatGPT.app/Contents/Resources/codex",
                      home + "/.local/bin/codex", "/opt/homebrew/bin/codex", "/usr/local/bin/codex"]
         if let path = paths.compactMap({ $0 }).first(where: { FileManager.default.isExecutableFile(atPath: $0) }) { return path }

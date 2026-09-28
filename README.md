@@ -21,7 +21,7 @@ Run the tests with `scripts/test.sh`. Add `--filter <name>` to run a single suit
 ## Prerequisites
 
 - **Claude Code:** installed and signed in with a Claude subscription (`claude auth login`). Token Meter reads Claude Code's own saved sign-in from the macOS Keychain. The first time, macOS may ask you to allow access.
-- **ChatGPT (Codex):** the ChatGPT desktop app installed in `/Applications`, with Codex signed in using your ChatGPT account (not an API key). Token Meter starts the bundled `codex app-server` briefly for each refresh. To use a different binary, set `TOKEN_METER_CODEX_PATH`.
+- **ChatGPT (Codex):** the ChatGPT desktop app installed in `/Applications`, with Codex signed in using your ChatGPT account (not an API key). Token Meter starts the bundled `codex app-server` briefly for each refresh, including the current `codex-cli/bin/codex` bundle layout. To use a different binary, set `TOKEN_METER_CODEX_PATH`.
 
 Token Meter stores no credentials, usage history or telemetry of its own.
 
@@ -49,7 +49,7 @@ Token Meter stores no credentials, usage history or telemetry of its own.
 
 ## Data sources and maintenance risk
 
-- **Codex:** the documented `codex app-server` JSON-RPC protocol (`initialize` → `account/read` → `account/rateLimits/read`). The app reads the `codex` bucket from `rateLimitsByLimitId` and never substitutes another model's bucket. Last validated with codex-cli 0.154.
+- **Codex:** the documented `codex app-server` JSON-RPC protocol (`initialize` → `account/read` → `account/rateLimits/read`). The app reads the `codex` bucket from `rateLimitsByLimitId` and never substitutes another model's bucket. Last validated with codex-cli 0.158.0-alpha.2.1.
 - **Claude Code:** there is no documented subscription-usage API. The app reads Claude Code's OAuth token from the Keychain item `Claude Code-credentials` and calls `GET https://api.anthropic.com/api/oauth/usage` (`five_hour`, `seven_day`), the same data behind `/usage`. **This endpoint and the credential format are undocumented and may change without notice.** All knowledge of them is isolated in `ClaudeProvider` and `UsageParsing.claude`. Last validated with Claude Code 2.1.267.
 
 `scripts/probe_sources.py` fetches both sources read-only, without printing secrets. Use it to check them after a CLI update.

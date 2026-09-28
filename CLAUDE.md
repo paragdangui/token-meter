@@ -10,7 +10,7 @@ Implemented. [PLAN.md](PLAN.md) is the specification and [README.md](README.md) 
 
 - macOS 26.6.2, Swift 6.4, **Command Line Tools only (no Xcode)**. That's why this is a SwiftPM package with an `.app` bundle assembled by `scripts/build-app.sh`, not an Xcode project.
 - Plain `swift test` fails here with "TestingMacros plugin not found". `scripts/test.sh` adds the CLT plugin path; always use it.
-- `claude` CLI: `~/.local/bin/claude` (2.1.267). `codex` is not on PATH; the app uses `/Applications/ChatGPT.app/Contents/Resources/codex` (codex-cli 0.154).
+- `claude` CLI: `~/.local/bin/claude`. `codex` is not on PATH; the current ChatGPT app bundles it at `/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex` (codex-cli 0.158.0-alpha.2.1).
 
 ## Build / test commands
 

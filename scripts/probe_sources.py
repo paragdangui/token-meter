@@ -2,9 +2,31 @@
 import json, os, selectors, subprocess, time, urllib.request, urllib.error
 
 
+def codex_binary():
+    home = os.path.expanduser('~')
+    candidates = [
+        os.environ.get('TOKEN_METER_CODEX_PATH'),
+        '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex',
+        '/Applications/Codex.app/Contents/Resources/codex-cli/bin/codex',
+        '/Applications/ChatGPT.app/Contents/Resources/codex',
+        '/Applications/Codex.app/Contents/Resources/codex',
+        home + '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex',
+        home + '/Applications/Codex.app/Contents/Resources/codex-cli/bin/codex',
+        home + '/Applications/ChatGPT.app/Contents/Resources/codex',
+        home + '/.local/bin/codex',
+        '/opt/homebrew/bin/codex', '/usr/local/bin/codex',
+    ]
+    return next((path for path in candidates if path and os.access(path, os.X_OK)), None)
+
+
 def codex():
-    binary = '/Applications/ChatGPT.app/Contents/Resources/codex'
-    p = subprocess.Popen([binary, 'app-server', '-c', 'analytics.enabled=false'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    binary = codex_binary()
+    if binary is None:
+        print('Codex executable unavailable')
+        return
+    # Unbuffered stdout keeps select() in sync with readline() when several
+    # JSON-RPC messages arrive together (including server notifications).
+    p = subprocess.Popen([binary, 'app-server', '-c', 'analytics.enabled=false'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
     selector = selectors.DefaultSelector()
     selector.register(p.stdout, selectors.EVENT_READ)
     def send(method, params, ident=None):

@@ -7,6 +7,7 @@ APP="$(pwd)/dist/Token Meter.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp assets/TokenMeter.icns "$APP/Contents/Resources/TokenMeter.icns"
 cp "$BIN_DIR/TokenMeter" "$APP/Contents/MacOS/TokenMeter"
+cp -R "$BIN_DIR/TokenMeter_TokenMeter.bundle" "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

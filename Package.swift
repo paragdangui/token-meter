@@ -6,7 +6,7 @@ let package = Package(
     products: [.executable(name: "TokenMeter", targets: ["TokenMeter"])],
     targets: [
         .target(name: "TokenMeterCore"),
-        .executableTarget(name: "TokenMeter", dependencies: ["TokenMeterCore"]),
+        .executableTarget(name: "TokenMeter", dependencies: ["TokenMeterCore"], resources: [.process("Resources")]),
         .testTarget(name: "TokenMeterCoreTests", dependencies: ["TokenMeterCore"])
     ]
 )

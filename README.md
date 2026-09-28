@@ -1,6 +1,6 @@
 # Token Meter
 
-A macOS menu bar app for personal use. It shows how much of your **Claude Code** and **ChatGPT (Codex)** subscription allowance you've used, as four meters: a session window and a weekly window per provider. It refreshes every 60 seconds, including while the panel is closed.
+A macOS menu bar app for personal use. It shows how much of your **Claude Code** and **ChatGPT (Codex)** subscription allowance you've used, as four meters: a session window and a weekly window per provider. Claude refreshes every two minutes and Codex every minute, including while the panel is closed.
 
 ## Build and run
 
@@ -31,7 +31,7 @@ Token Meter stores no credentials, usage history or telemetry of its own.
 - **Session (5h)** is the provider's rolling short-term window. Neither provider currently exposes a daily quota, so nothing is labelled "Daily" unless a provider returns a 24-hour window.
 - **Weekly** is the provider's 7-day window.
 - **Unavailable** means the provider didn't return that window. It never means 0%.
-- **Stale · Updated 12:34** means the last refresh failed, or the value is more than two minutes old. The numbers shown come from that earlier time.
+- **Stale · Updated 12:34** means the last refresh failed, or the value is more than four minutes old for Claude or two minutes old for Codex. The numbers shown come from that earlier time.
 - Both the menu bar and tray panel show time until each window resets, updated every 30 seconds. Session countdowns use hours rounded up to a tenth; weekly countdowns use days and hours rounded up to the next hour. Missing reset times are unavailable; elapsed reset times show `0.0h` or `0d 0h` until fresh data arrives. Hover a bar to see the exact reset date and time.
 
 "ChatGPT" here means **Codex usage included with your ChatGPT plan**, not general ChatGPT chat usage. No usage API covers general ChatGPT chat.

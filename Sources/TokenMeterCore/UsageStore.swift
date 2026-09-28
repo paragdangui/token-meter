@@ -15,6 +15,7 @@ public protocol UsageProvider: Sendable {
     private let sleep: (UInt64) async throws -> Void
     private var timer: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
+    private var automaticTick = 0
     private var generation = 0
     public init(providers: [any UsageProvider], now: @escaping () -> Date = Date.init,
                 sleep: @escaping (UInt64) async throws -> Void = { try await Task.sleep(nanoseconds: $0) }) {
@@ -22,12 +23,13 @@ public protocol UsageProvider: Sendable {
     }
     public func start() {
         guard timer == nil else { return }
+        automaticTick = 0
         reload()
         timer = Task { [weak self, sleep] in
             while !Task.isCancelled {
                 do { try await sleep(60_000_000_000) } catch { return }
                 guard !Task.isCancelled else { return }
-                self?.reload()
+                self?.reloadAutomatically()
             }
         }
     }
@@ -39,18 +41,30 @@ public protocol UsageProvider: Sendable {
         for id in ProviderID.allCases { states[id]?.isLoading = false }
     }
     public func reload() {
+        scheduleReload(includeClaude: true)
+    }
+    private func reloadAutomatically() {
+        automaticTick += 1
+        scheduleReload(includeClaude: automaticTick.isMultiple(of: 2))
+    }
+    private func scheduleReload(includeClaude: Bool) {
         guard refreshTask == nil else { return }
         refreshTask = Task { [weak self] in
             guard let self else { return }
-            await self.refresh()
+            await self.refresh(includeClaude: includeClaude)
             self.refreshTask = nil
         }
     }
     public func refresh() async {
+        await refresh(includeClaude: true)
+    }
+    private func refresh(includeClaude: Bool) async {
         guard !isRefreshing else { return }
         isRefreshing = true
         let currentGeneration = generation
-        let due = providers.filter { (states[$0.id]?.retryAt ?? .distantPast) <= now() }
+        let due = providers.filter { provider in
+            (includeClaude || provider.id != .claude) && (states[provider.id]?.retryAt ?? .distantPast) <= now()
+        }
         for provider in due { states[provider.id]?.isLoading = true }
         await withTaskGroup(of: (ProviderID, Result<UsageSnapshot, UsageFailure>).self) { group in
             for provider in due {

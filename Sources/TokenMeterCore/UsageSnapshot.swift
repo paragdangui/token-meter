@@ -83,7 +83,7 @@ public struct ProviderState: Sendable {
     public init() {}
     public func isStale(at now: Date, for provider: ProviderID) -> Bool {
         guard let snapshot else { return false }
-        let staleAfter: TimeInterval = provider == .claude ? 240 : 120
+        let staleAfter: TimeInterval = provider == .claude ? 600 : 120
         return failure != nil || now.timeIntervalSince(snapshot.fetchedAt) > staleAfter
     }
 }

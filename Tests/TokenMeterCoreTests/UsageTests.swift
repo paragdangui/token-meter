@@ -192,15 +192,18 @@ private actor TestSleeper {
         }
         await eventually { await sleeper.pending == 1 }
         let intervals = await sleeper.intervals; XCTAssertEqual(intervals, [60_000_000_000])
-        await sleeper.tick()
-        await eventually { await codex.calls == 2 && !store.isRefreshing }
-        var claudeCalls = await claude.calls; XCTAssertEqual(claudeCalls, 1)
-        await eventually { await sleeper.pending == 1 }
+        var claudeCalls = 0
+        for expectedCodex in 2...5 {
+            await sleeper.tick()
+            await eventually { await codex.calls == expectedCodex && !store.isRefreshing }
+            claudeCalls = await claude.calls; XCTAssertEqual(claudeCalls, 1)
+            await eventually { await sleeper.pending == 1 }
+        }
         await sleeper.tick()
         await eventually {
             let claudeCalls = await claude.calls
             let codexCalls = await codex.calls
-            return claudeCalls == 2 && codexCalls == 3 && !store.isRefreshing
+            return claudeCalls == 2 && codexCalls == 6 && !store.isRefreshing
         }
         store.suspend()
         await eventually { await sleeper.pending == 0 }
@@ -208,20 +211,21 @@ private actor TestSleeper {
         await eventually {
             let claudeCalls = await claude.calls
             let codexCalls = await codex.calls
-            return claudeCalls == 3 && codexCalls == 4 && !store.isRefreshing
+            return claudeCalls == 3 && codexCalls == 7 && !store.isRefreshing
         }
         store.stop()
         await eventually { await sleeper.pending == 0 }
         await sleeper.tick()
         claudeCalls = await claude.calls; XCTAssertEqual(claudeCalls, 3)
-        let codexCalls = await codex.calls; XCTAssertEqual(codexCalls, 4)
+        let codexCalls = await codex.calls; XCTAssertEqual(codexCalls, 7)
     }
     @Test func testStaleAgeMatchesProviderCadence() {
         var state = ProviderState()
         state.snapshot = snapshot
         XCTAssertEqual(state.isStale(at: now.addingTimeInterval(121), for: .codex), true)
         XCTAssertEqual(state.isStale(at: now.addingTimeInterval(121), for: .claude), false)
-        XCTAssertEqual(state.isStale(at: now.addingTimeInterval(241), for: .claude), true)
+        XCTAssertEqual(state.isStale(at: now.addingTimeInterval(599), for: .claude), false)
+        XCTAssertEqual(state.isStale(at: now.addingTimeInterval(601), for: .claude), true)
         state.failure = .timeout
         XCTAssertEqual(state.isStale(at: now, for: .claude), true)
     }

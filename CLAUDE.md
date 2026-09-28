@@ -26,8 +26,8 @@ python3 scripts/probe_sources.py                 # live read-only check of both 
 ## Architecture
 
 - `Sources/TokenMeterCore` (library, all the testable logic):
-  - `UsageSnapshot.swift`: `ProviderID`, `UsageWindow` (label derived from duration), `UsageSnapshot`, `UsageFailure`, `ProviderState` (stale = failure or more than 240s old for Claude, 120s for Codex).
-  - `UsageStore.swift`: the `UsageProvider` protocol and `UsageStore`, the single refresh coordinator. It covers the 60s Codex / 120s Claude cadence, coalesced `reload()`, per-provider task group, `retryAt` throttle gate, `suspend`/`wake`/`stop`, and injectable `now`/`sleep` for tests.
+  - `UsageSnapshot.swift`: `ProviderID`, `UsageWindow` (label derived from duration), `UsageSnapshot`, `UsageFailure`, `ProviderState` (stale = failure or more than 600s old for Claude, 120s for Codex).
+  - `UsageStore.swift`: the `UsageProvider` protocol and `UsageStore`, the single refresh coordinator. It covers the 60s Codex / 300s Claude cadence, coalesced `reload()`, per-provider task group, `retryAt` throttle gate, `suspend`/`wake`/`stop`, and injectable `now`/`sleep` for tests.
   - `Providers.swift`: the `CodexProvider` and `ClaudeProvider` adapters.
   - `UsageParsing.swift`: pure response parsing plus `Retry-After`.
   - `HelperProcess.swift`: bounded child processes (poll-based read timeout, `F_SETNOSIGPIPE`, SIGKILL on close). `HelperProcesses.shared` kills owned helpers on quit.

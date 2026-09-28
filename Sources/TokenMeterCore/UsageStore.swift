@@ -45,7 +45,7 @@ public protocol UsageProvider: Sendable {
     }
     private func reloadAutomatically() {
         automaticTick += 1
-        scheduleReload(includeClaude: automaticTick.isMultiple(of: 2))
+        scheduleReload(includeClaude: automaticTick.isMultiple(of: 5))
     }
     private func scheduleReload(includeClaude: Bool) {
         guard refreshTask == nil else { return }
